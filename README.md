@@ -8,7 +8,7 @@ Wakey is a small Wake-on-LAN server with a phone-friendly web UI and a simple HT
 - serves a compact mobile web page with a single wake button
 - lets you edit the target machine settings in the browser
 - exposes a `POST /api/wake` endpoint for Shortcuts, scripts, and automation
-- runs cleanly in Docker on OrbStack using host networking
+- runs in Docker for private LAN setups
 
 ## How it works
 
@@ -18,7 +18,7 @@ Wakey is a single Go binary that:
 2. accepts API requests
 3. sends a UDP broadcast magic packet to the configured MAC address
 
-On macOS with OrbStack, `network_mode: host` lets the container use the host network directly, which is the simplest setup for Wake-on-LAN.
+Using `network_mode: host` lets the container use the host network directly, which is the simplest setup for Wake-on-LAN.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ On macOS with OrbStack, `network_mode: host` lets the container use the host net
 - Wake-on-LAN enabled in BIOS/UEFI and OS network settings
 - correct target MAC address
 - correct LAN broadcast address, such as `192.168.1.255`
-- OrbStack or another Docker environment that supports host networking for your use case
+- a Docker environment that supports host networking for your use case
 
 ## Configuration
 
