@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Wakey</title>
+    <style>
+      :root {
+        --ink: #152320;
+        --paper: #f5efe4;
+        --paper-strong: #fffaf0;
+        --accent: #d96c3f;
+        --accent-deep: #8f3f22;
+        --line: rgba(21, 35, 32, 0.14);
+        --success: #1f6b52;
+        --shadow: 0 24px 70px rgba(39, 24, 17, 0.18);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(217, 108, 63, 0.35), transparent 30%),
+          radial-gradient(circle at bottom right, rgba(31, 107, 82, 0.22), transparent 28%),
+          linear-gradient(135deg, #f1e8d8, #f9f4eb 42%, #efe4d3);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      main {
+        width: min(100%, 560px);
+        background: linear-gradient(180deg, rgba(255, 250, 240, 0.96), rgba(247, 239, 225, 0.92));
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 34px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      main::after {
+        content: "";
+        position: absolute;
+        inset: auto -50px -70px auto;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: rgba(217, 108, 63, 0.08);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 0.75rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(21, 35, 32, 0.55);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.6rem, 7vw, 4rem);
+        line-height: 0.96;
+      }
+
+      p {
+        margin: 16px 0 0;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        max-width: 34ch;
+      }
+
+      .panel {
+        margin-top: 28px;
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.46);
+        border: 1px solid rgba(21, 35, 32, 0.08);
+      }
+
+      .target-card {
+        display: grid;
+        gap: 6px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid rgba(21, 35, 32, 0.08);
+        margin-bottom: 14px;
+      }
+
+      .target-label {
+        font-size: 0.74rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(21, 35, 32, 0.55);
+      }
+
+      .target-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+      }
+
+      .target-meta {
+        font-size: 0.9rem;
+        color: rgba(21, 35, 32, 0.72);
+        word-break: break-word;
+      }
+
+      button {
+        appearance: none;
+        width: 100%;
+        border: 0;
+        border-radius: 18px;
+        padding: 18px 22px;
+        font: inherit;
+        font-size: 1.08rem;
+        font-weight: 700;
+        cursor: pointer;
+        color: #fffaf5;
+        background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+        box-shadow: 0 16px 30px rgba(143, 63, 34, 0.22);
+        transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+      }
+
+      button:hover { transform: translateY(-1px); }
+      button:active { transform: translateY(1px); }
+      button:disabled { cursor: wait; opacity: 0.72; }
+
+      .secondary-button {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(21, 35, 32, 0.14);
+        background: rgba(255, 255, 255, 0.68);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 160ms ease, transform 160ms ease;
+      }
+
+      .secondary-button:hover { background: rgba(255, 255, 255, 0.9); }
+
+      .settings-panel {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(21, 35, 32, 0.08);
+      }
+
+      .settings-panel[hidden] {
+        display: none;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        margin-top: 14px;
+        font-size: 0.96rem;
+      }
+
+      .status[data-state="success"] { color: var(--success); }
+      .status[data-state="error"] { color: #a03d1b; }
+
+      .fields {
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(21, 35, 32, 0.18);
+        background: rgba(255, 255, 255, 0.9);
+        font: inherit;
+      }
+
+      .hint {
+        margin-top: 12px;
+        font-size: 0.88rem;
+        color: rgba(21, 35, 32, 0.66);
+      }
+
+      @media (max-width: 600px) {
+        main { padding: 24px; border-radius: 22px; }
+        p { max-width: none; }
+        .field-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Wake on LAN</p>
+      <h1>Wakey</h1>
+      <p>Wake <strong>{{ .TargetName }}</strong> from your phone with one tap.</p>
+
+      <section class="panel">
+        <div class="target-card">
+          <div class="target-label">Ready To Wake</div>
+          <div id="target-name-display" class="target-name">{{ .TargetName }}</div>
+          <div id="target-meta-display" class="target-meta">{{ .TargetMAC }} • {{ .BroadcastAddr }}:{{ .Port }}</div>
+        </div>
+        <button id="wake-button" type="button">{{ .ButtonLabel }}</button>
+        <button id="toggle-settings" class="secondary-button" type="button" aria-expanded="false">Edit target settings</button>
+        <div id="settings-panel" class="settings-panel" hidden>
+          <div class="fields">
+            <div>
+              <label for="target-name">Computer name</label>
+              <input id="target-name" name="target-name" type="text" value="{{ .TargetName }}" placeholder="Studio PC">
+            </div>
+            <div>
+              <label for="mac-address">MAC address</label>
+              <input id="mac-address" name="mac-address" type="text" value="{{ .TargetMAC }}" placeholder="AA:BB:CC:DD:EE:FF" spellcheck="false">
+            </div>
+            <div class="field-grid">
+              <div>
+                <label for="broadcast-address">Broadcast address</label>
+                <input id="broadcast-address" name="broadcast-address" type="text" value="{{ .BroadcastAddr }}" placeholder="192.168.1.255" spellcheck="false">
+              </div>
+              <div>
+                <label for="port">UDP port</label>
+                <input id="port" name="port" type="number" value="{{ .Port }}" min="1" max="65535">
+              </div>
+            </div>
+          </div>
+        {{ if .TokenSet }}
+        <div class="fields">
+          <label for="token">Auth token</label>
+          <input id="token" name="token" type="password" autocomplete="current-password" placeholder="Enter token">
+        </div>
+        {{ end }}
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div class="hint">API endpoint: <code>{{ .APIPath }}</code>. Settings are saved in this browser.</div>
+      </section>
+    </main>
+
+    <script>
+      const button = document.getElementById('wake-button');
+      const status = document.getElementById('status');
+      const tokenInput = document.getElementById('token');
+      const targetNameInput = document.getElementById('target-name');
+      const macInput = document.getElementById('mac-address');
+      const broadcastInput = document.getElementById('broadcast-address');
+      const portInput = document.getElementById('port');
+      const targetNameDisplay = document.getElementById('target-name-display');
+      const targetMetaDisplay = document.getElementById('target-meta-display');
+      const toggleSettingsButton = document.getElementById('toggle-settings');
+      const settingsPanel = document.getElementById('settings-panel');
+      const storageKey = 'wakey-config';
+
+      function loadConfig() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          if (stored.targetName) targetNameInput.value = stored.targetName;
+          if (stored.macAddress) macInput.value = stored.macAddress;
+          if (stored.broadcastAddress) broadcastInput.value = stored.broadcastAddress;
+          if (stored.port) portInput.value = stored.port;
+        } catch (_) {}
+      }
+
+      function saveConfig() {
+        const config = {
+          targetName: targetNameInput.value.trim(),
+          macAddress: macInput.value.trim(),
+          broadcastAddress: broadcastInput.value.trim(),
+          port: Number(portInput.value || 0),
+        };
+        localStorage.setItem(storageKey, JSON.stringify(config));
+        syncTargetCard();
+      }
+
+      function syncTargetCard() {
+        const targetName = targetNameInput.value.trim() || '{{ .TargetName }}';
+        const macAddress = macInput.value.trim() || '{{ .TargetMAC }}';
+        const broadcastAddress = broadcastInput.value.trim() || '{{ .BroadcastAddr }}';
+        const port = portInput.value.trim() || '{{ .Port }}';
+
+        targetNameDisplay.textContent = targetName;
+        targetMetaDisplay.textContent = `${macAddress} • ${broadcastAddress}:${port}`;
+      }
+
+      function setSettingsOpen(isOpen) {
+        settingsPanel.hidden = !isOpen;
+        toggleSettingsButton.setAttribute('aria-expanded', String(isOpen));
+        toggleSettingsButton.textContent = isOpen ? 'Hide target settings' : 'Edit target settings';
+      }
+
+      function setStatus(message, state) {
+        status.textContent = message;
+        status.dataset.state = state || '';
+      }
+
+      loadConfig();
+      syncTargetCard();
+      setSettingsOpen(false);
+
+      [targetNameInput, macInput, broadcastInput, portInput].forEach((input) => {
+        input.addEventListener('input', saveConfig);
+      });
+
+      toggleSettingsButton.addEventListener('click', () => {
+        setSettingsOpen(settingsPanel.hidden);
+      });
+
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        setStatus('Sending magic packet...', '');
+
+        try {
+          const headers = {};
+          if (tokenInput && tokenInput.value.trim()) {
+            headers.Authorization = `Bearer ${tokenInput.value.trim()}`;
+          }
+          headers['Content-Type'] = 'application/json';
+
+          const payload = {
+            targetName: targetNameInput.value.trim(),
+            macAddress: macInput.value.trim(),
+            broadcastAddress: broadcastInput.value.trim(),
+            port: Number(portInput.value || 0),
+          };
+
+          saveConfig();
+
+          const response = await fetch('{{ .APIPath }}', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.message || 'Request failed.');
+          }
+
+          setStatus(result.message || 'Magic packet sent.', 'success');
+        } catch (error) {
+          setStatus(error.message || 'Request failed.', 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
