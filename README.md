@@ -1,40 +1,66 @@
 # Wakey
 
-Wakey is a small Wake-on-LAN server with a phone-friendly web UI and a simple HTTP API. It is designed for private LAN use, so you can wake a desktop or home server from another device on your network.
+Wake your computer from your phone.
 
-## What it does
+Wakey is a small Wake-on-LAN web server with a clean mobile UI, a simple JSON API, and a Docker-friendly setup for private LAN environments.
 
-- sends a Wake-on-LAN magic packet to a target machine
-- serves a compact mobile web page with a single wake button
-- lets you edit the target machine settings in the browser
-- exposes a `POST /api/wake` endpoint for Shortcuts, scripts, and automation
-- runs in Docker for private LAN setups
+## Why Wakey
 
-## How it works
+- one-tap wake button from any phone or browser
+- editable target settings in the UI
+- `POST /api/wake` for scripts, Shortcuts, and automations
+- small Go service with no database and no frontend build step
+- safe public repo layout with local secrets kept in `.env`
+
+## What It Looks Like
+
+Wakey is designed to feel simple on a phone:
+
+- open the page
+- tap `Wake Computer`
+- optionally expand `Edit target settings`
+
+The current target is shown on the main card so the page stays useful without feeling like an admin dashboard.
+
+## How It Works
 
 Wakey is a single Go binary that:
 
 1. serves the web UI
 2. accepts API requests
-3. sends a UDP broadcast magic packet to the configured MAC address
+3. sends a Wake-on-LAN magic packet over UDP broadcast
 
-Using `network_mode: host` lets the container use the host network directly, which is the simplest setup for Wake-on-LAN.
+Using `network_mode: host` lets the container use the host network directly, which is the simplest setup for Wake-on-LAN in Docker.
 
 ## Requirements
 
 - target machine connected over Ethernet
 - Wake-on-LAN enabled in BIOS/UEFI and OS network settings
 - correct target MAC address
-- correct LAN broadcast address, such as `192.168.1.255`
-- a Docker environment that supports host networking for your use case
+- correct LAN broadcast address such as `192.168.1.255`
+- a Docker environment that supports host networking for your setup
 
-## Configuration
+## Quick Start
 
-Copy `.env.example` to `.env`:
+Copy the example config:
 
 ```sh
 cp .env.example .env
 ```
+
+Start the service:
+
+```sh
+docker compose up -d --build
+```
+
+Open:
+
+```text
+http://localhost:8787
+```
+
+## Configuration
 
 Available variables:
 
@@ -47,34 +73,21 @@ Available variables:
 - `WAKEY_SUCCESS_MESSAGE`: success message returned by the UI and API
 - `WAKEY_AUTH_TOKEN`: optional bearer token for `POST /api/wake`
 
-## Web UI behavior
+## Web UI
 
-The web interface keeps the wake action front and center, with editable settings behind an `Edit target settings` panel.
+The UI is intentionally compact.
 
-The browser can override the default target values for:
+- the wake action is front and center
+- target settings live behind `Edit target settings`
+- values are saved in browser `localStorage`
+- your phone can remember the machine details without committing them to git
+
+The browser can override:
 
 - computer name
 - MAC address
 - broadcast address
 - UDP port
-
-Those values are stored in browser `localStorage`, so your phone can remember them without committing any private machine details to the repository.
-
-## Run locally
-
-```sh
-go run .
-```
-
-The app listens on `http://localhost:8787` by default.
-
-## Run with Docker Compose
-
-```sh
-docker compose up -d --build
-```
-
-Compose uses host networking so the container can send WoL traffic onto your LAN.
 
 ## API
 
@@ -84,7 +97,7 @@ Wake the default configured machine:
 curl -X POST http://localhost:8787/api/wake
 ```
 
-Wake a specific machine by sending the target details in JSON:
+Wake a specific machine with request overrides:
 
 ```sh
 curl -X POST \
@@ -101,22 +114,37 @@ curl -X POST \
   http://localhost:8787/api/wake
 ```
 
-Successful responses look like:
+Success response:
 
 ```json
 {"ok":true,"message":"Magic packet sent."}
 ```
 
-## Which port should I use?
+## Which Port Should I Use?
 
 - start with UDP port `9`
 - if wake does not work, try UDP port `7`
-- on most local networks, the important part is the magic packet payload and broadcast delivery, not a special application protocol on the target machine
-- Wakey defaults to `9` because it is the most common WoL convention
+- on most LANs, the important part is the magic packet and broadcast delivery, not a special application protocol on the target machine
 
-## Private reverse proxy example
+## How To Find Your Broadcast Address
 
-If you already use a private Caddy ingress, you can reverse proxy Wakey like this:
+If your machine IP is `192.168.1.42` and your subnet mask is `255.255.255.0`, your broadcast address is usually:
+
+```text
+192.168.1.255
+```
+
+Common examples:
+
+- `192.168.1.42` with `255.255.255.0` -> `192.168.1.255`
+- `10.0.0.23` with `255.255.255.0` -> `10.0.0.255`
+- `192.168.0.15` with `255.255.255.0` -> `192.168.0.255`
+
+If you are unsure, check your router or network settings and use the broadcast address for the target machine's subnet.
+
+## Reverse Proxy Example
+
+If you already run a private reverse proxy, you can point a hostname at Wakey like this:
 
 ```caddyfile
 wakey.mini.example.com {
@@ -124,19 +152,20 @@ wakey.mini.example.com {
 }
 ```
 
-## Security notes
+## Security Notes
 
-- Wakey is best used on a private LAN or behind a private reverse proxy such as Tailscale + Caddy
-- do not commit real MAC addresses, tokens, or internal DNS names unless you want them public
+- Wakey is best used on a private LAN or behind a private reverse proxy
+- do not commit real MAC addresses, tokens, or internal hostnames if you want the repo public
 - if you expose the API beyond your private network, set `WAKEY_AUTH_TOKEN`
-- Wake-on-LAN only powers a machine on; it does not bypass login or disk encryption
+- Wake-on-LAN powers a machine on; it does not bypass login, encryption, or OS security
 
 ## Troubleshooting
 
 - page does not load: make sure the container is running and `localhost:8787` responds
-- wake request succeeds but machine stays off: verify BIOS/UEFI WoL support and Ethernet link lights when powered off
+- wake request succeeds but the machine stays off: verify BIOS/UEFI WoL support and NIC power settings
 - no wake over Wi-Fi: standard WoL is most reliable over wired Ethernet
-- wrong broadcast address: try your subnet broadcast such as `192.168.1.255` instead of the global broadcast
+- wrong broadcast address: try the subnet broadcast instead of the global broadcast
+- shutdown wake fails but sleep wake works: this usually points to motherboard or NIC settings rather than Wakey itself
 
 ## Development
 
@@ -147,3 +176,7 @@ docker compose up -d --build
 docker compose logs -f
 docker compose down
 ```
+
+## License
+
+MIT
