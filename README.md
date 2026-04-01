@@ -42,7 +42,7 @@ Available variables:
 - `WOL_TARGET_NAME`: label shown in the UI, default `My Computer`
 - `WOL_MAC`: default target MAC address; optional if you prefer entering it in the UI
 - `WOL_BROADCAST_ADDR`: default broadcast address, default `255.255.255.255`
-- `WOL_PORT`: UDP port, default `9`
+- `WOL_PORT`: UDP port, default `9`; if your target does not respond, `7` is the next common fallback
 - `WAKEY_BUTTON_LABEL`: button label shown in the UI
 - `WAKEY_SUCCESS_MESSAGE`: success message returned by the UI and API
 - `WAKEY_AUTH_TOKEN`: optional bearer token for `POST /api/wake`
@@ -106,6 +106,13 @@ Successful responses look like:
 ```json
 {"ok":true,"message":"Magic packet sent."}
 ```
+
+## Which port should I use?
+
+- start with UDP port `9`
+- if wake does not work, try UDP port `7`
+- on most local networks, the important part is the magic packet payload and broadcast delivery, not a special application protocol on the target machine
+- Wakey defaults to `9` because it is the most common WoL convention
 
 ## Private reverse proxy example
 
