@@ -71,6 +71,12 @@ To install it as a per-user boot service on macOS:
 ./tools/install_launchd_helper.sh
 ```
 
+To remove the boot service later:
+
+```sh
+./tools/uninstall_launchd_helper.sh
+```
+
 The installer copies the helper into `~/Library/Application Support/Wakey` and registers a `launchd` agent, which avoids macOS privacy issues with running login agents directly from `Documents`.
 
 Open:
@@ -214,6 +220,7 @@ docker compose logs -f
 docker compose down
 ./tools/start_host_helper.sh
 ./tools/install_launchd_helper.sh
+./tools/uninstall_launchd_helper.sh
 ```
 
 ## License
