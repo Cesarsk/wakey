@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -28,6 +29,8 @@ type config struct {
 	BroadcastAddr  string
 	Port           int
 	AuthToken      string
+	HostHelperURL   string
+	HostHelperToken string
 	ButtonLabel    string
 	SuccessMessage string
 }
@@ -102,7 +105,9 @@ func main() {
 			return
 		}
 
-		if err := sendMagicPacket(target.BroadcastAddr, target.Port, target.TargetMAC); err != nil {
+		log.Printf("sending magic packet to %s via %s:%d (%s)", target.TargetName, target.BroadcastAddr, target.Port, target.TargetMAC.String())
+
+		if err := dispatchMagicPacket(target, cfg); err != nil {
 			log.Printf("wake failed: %v", err)
 			writeJSON(w, http.StatusInternalServerError, wakeResponse{OK: false, Message: "Failed to send magic packet."})
 			return
@@ -158,10 +163,54 @@ func loadConfig() (config, error) {
 		TargetMAC:      mac,
 		BroadcastAddr:  broadcastAddr,
 		Port:           port,
-		AuthToken:      os.Getenv("WAKEY_AUTH_TOKEN"),
-		ButtonLabel:    getenv("WAKEY_BUTTON_LABEL", "Wake Computer"),
-		SuccessMessage: getenv("WAKEY_SUCCESS_MESSAGE", "Magic packet sent."),
+		AuthToken:       os.Getenv("WAKEY_AUTH_TOKEN"),
+		HostHelperURL:   strings.TrimSpace(os.Getenv("WAKEY_HOST_HELPER_URL")),
+		HostHelperToken: strings.TrimSpace(os.Getenv("WAKEY_HOST_HELPER_TOKEN")),
+		ButtonLabel:     getenv("WAKEY_BUTTON_LABEL", "Wake Computer"),
+		SuccessMessage:  getenv("WAKEY_SUCCESS_MESSAGE", "Magic packet sent."),
 	}, nil
+}
+
+func dispatchMagicPacket(target wakeTarget, cfg config) error {
+	if cfg.HostHelperURL != "" {
+		return sendViaHostHelper(cfg.HostHelperURL, cfg.HostHelperToken, target)
+	}
+
+	return sendMagicPacket(target.BroadcastAddr, target.Port, target.TargetMAC)
+}
+
+func sendViaHostHelper(helperURL string, helperToken string, target wakeTarget) error {
+	body, err := json.Marshal(wakeRequest{
+		TargetName:    target.TargetName,
+		MACAddress:    target.TargetMAC.String(),
+		BroadcastAddr: target.BroadcastAddr,
+		Port:          target.Port,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, helperURL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if helperToken != "" {
+		req.Header.Set("X-Wakey-Helper-Token", helperToken)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("host helper returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	return nil
 }
 
 func authorize(r *http.Request, expectedToken string) error {
@@ -272,8 +321,13 @@ func sendMagicPacket(broadcastAddr string, port int, mac net.HardwareAddr) error
 		return err
 	}
 
-	if _, err := conn.Write(payload); err != nil {
-		return err
+	for i := range 3 {
+		if _, err := conn.Write(payload); err != nil {
+			return err
+		}
+		if i < 2 {
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 
 	return nil

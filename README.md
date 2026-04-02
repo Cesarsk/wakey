@@ -28,9 +28,13 @@ Wakey is a single Go binary that:
 
 1. serves the web UI
 2. accepts API requests
-3. sends a Wake-on-LAN magic packet over UDP broadcast
+3. either sends the Wake-on-LAN magic packet directly or forwards the request to a tiny host-side helper
 
-Using `network_mode: host` lets the container use the host network directly, which is the simplest setup for Wake-on-LAN in Docker.
+On macOS Docker runtimes, the most reliable setup is often:
+
+1. run Wakey in Docker
+2. run the included host helper on macOS
+3. let the helper emit the WoL broadcast on the real LAN
 
 ## Requirements
 
@@ -38,7 +42,8 @@ Using `network_mode: host` lets the container use the host network directly, whi
 - Wake-on-LAN enabled in BIOS/UEFI and OS network settings
 - correct target MAC address
 - correct LAN broadcast address such as `192.168.1.255`
-- a Docker environment that supports host networking for your setup
+- a Docker environment for the web app
+- on macOS, optionally the included host helper for reliable LAN packet delivery
 
 ## Quick Start
 
@@ -53,6 +58,20 @@ Start the service:
 ```sh
 docker compose up -d --build
 ```
+
+If you are on macOS and direct container WoL is unreliable, start the included helper in a second terminal:
+
+```sh
+./tools/start_host_helper.sh
+```
+
+To install it as a per-user boot service on macOS:
+
+```sh
+./tools/install_launchd_helper.sh
+```
+
+The installer copies the helper into `~/Library/Application Support/Wakey` and registers a `launchd` agent, which avoids macOS privacy issues with running login agents directly from `Documents`.
 
 Open:
 
@@ -69,9 +88,13 @@ Available variables:
 - `WOL_MAC`: default target MAC address; optional if you prefer entering it in the UI
 - `WOL_BROADCAST_ADDR`: default broadcast address, default `255.255.255.255`
 - `WOL_PORT`: UDP port, default `9`; if your target does not respond, `7` is the next common fallback
+- `WAKEY_HOST_HELPER_URL`: optional host helper endpoint such as `http://127.0.0.1:8788/wake`
 - `WAKEY_BUTTON_LABEL`: button label shown in the UI
 - `WAKEY_SUCCESS_MESSAGE`: success message returned by the UI and API
 - `WAKEY_AUTH_TOKEN`: optional bearer token for `POST /api/wake`
+
+If `WAKEY_HOST_HELPER_URL` is set, Wakey forwards wake requests to the helper instead of sending the packet from inside the container.
+If `WAKEY_HOST_HELPER_TOKEN` is set, Wakey includes it in `X-Wakey-Helper-Token` and the helper rejects requests without the matching token.
 
 ## Web UI
 
@@ -120,6 +143,18 @@ Success response:
 {"ok":true,"message":"Magic packet sent."}
 ```
 
+## macOS Helper
+
+The helper lives in `tools/host_wol_helper.rb` and only accepts one kind of request:
+
+- `POST /wake`
+- JSON body with `macAddress`, `broadcastAddress`, and `port`
+- optional `X-Wakey-Helper-Token` header when token protection is enabled
+
+Its only job is to build the magic packet and send it from the macOS host. It does not expose any broader shell access or arbitrary command execution.
+
+By default the helper binds to `127.0.0.1`, which means it is not exposed on your LAN. In the current setup it is only reachable locally by Wakey running with host networking.
+
 ## Which Port Should I Use?
 
 - start with UDP port `9`
@@ -166,6 +201,8 @@ wakey.mini.example.com {
 - no wake over Wi-Fi: standard WoL is most reliable over wired Ethernet
 - wrong broadcast address: try the subnet broadcast instead of the global broadcast
 - shutdown wake fails but sleep wake works: this usually points to motherboard or NIC settings rather than Wakey itself
+- on macOS, if direct container WoL does not work, use `WAKEY_HOST_HELPER_URL` with `./tools/start_host_helper.sh`
+- if you want the helper at login/boot on macOS, install the included `launchd` agent with `./tools/install_launchd_helper.sh`
 
 ## Development
 
@@ -175,6 +212,8 @@ Useful commands:
 docker compose up -d --build
 docker compose logs -f
 docker compose down
+./tools/start_host_helper.sh
+./tools/install_launchd_helper.sh
 ```
 
 ## License

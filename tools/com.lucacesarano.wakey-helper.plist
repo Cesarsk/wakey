@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lucacesarano.wakey-helper</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>__START_SCRIPT__</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>WAKEY_HELPER_HOST</key>
+    <string>127.0.0.1</string>
+    <key>WAKEY_HELPER_PORT</key>
+    <string>8788</string>
+    <key>WAKEY_HOST_HELPER_TOKEN</key>
+    <string>__HELPER_TOKEN__</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>__WORKDIR__</string>
+  <key>StandardOutPath</key>
+  <string>/tmp/wakey-helper.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/wakey-helper.log</string>
+</dict>
+</plist>
